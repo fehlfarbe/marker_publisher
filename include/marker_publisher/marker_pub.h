@@ -39,6 +39,8 @@ public:
     aruco::CameraParameters rosCameraInfo2ArucoCamParams(const sensor_msgs::CameraInfo& cam_info,
                                                          bool useRectifiedParameters);
 
+    bool hasSubscribers();
+
 protected:
     ros::NodeHandle nh_node;
     ros::Subscriber sub;

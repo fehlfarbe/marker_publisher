@@ -32,7 +32,7 @@ MarkerPosePublisher::MarkerPosePublisher() : nh_node("~") {
         try {
             nh_node.param<std::string>("TheCameraParameters_path", TheCameraParameters_path, "");
             TheCameraParameters.readFromXMLFile(TheCameraParameters_path);
-        } catch (cv::Exception) {
+        } catch (cv::Exception&) {
             ROS_ERROR("Cannot load camera parameters!");
         }
     }
@@ -54,10 +54,15 @@ MarkerPosePublisher::MarkerPosePublisher() : nh_node("~") {
 }
 
 void MarkerPosePublisher::callBackColor(const sensor_msgs::ImageConstPtr &msg) {
-    cv_bridge::CvImagePtr cv_ptr;
+    if(!hasSubscribers()){
+        return;
+    }
+
+    cv_bridge::CvImagePtr cv_ptr, cv_preview;
 
     try {
         cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+        cv_preview = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
     }
 
     catch (cv_bridge::Exception &e) {
@@ -105,9 +110,9 @@ void MarkerPosePublisher::callBackColor(const sensor_msgs::ImageConstPtr &msg) {
             detected_markers[i].calculateExtrinsics(markerSizeMeters, TheCameraParameters.CameraMatrix,
                                                     TheCameraParameters.Distorsion, false);
 
-        detected_markers[i].draw(cv_ptr->image, cv::Scalar(0, 0, 255), 3, true, true);
+        detected_markers[i].draw(cv_preview->image, cv::Scalar(0, 0, 255), 3, true, true);
 //        aruco::CvDrawingUtils::draw3dCube(cv_ptr->image, detected_markers[i], TheCameraParameters);
-        aruco::CvDrawingUtils::draw3dAxis(cv_ptr->image, detected_markers[i], TheCameraParameters);
+        aruco::CvDrawingUtils::draw3dAxis(cv_preview->image, detected_markers[i], TheCameraParameters);
 
         tf::Transform object_transform = arucoMarker2Tf(detected_markers[i]);
 
@@ -135,14 +140,14 @@ void MarkerPosePublisher::callBackColor(const sensor_msgs::ImageConstPtr &msg) {
     }
 
     // only publish if markers detected
-    if(detected_markers.size() > 0) {
+    if(!detected_markers.empty()) {
         markers_pub_array.publish(marker_msg_pub);
     }
 
     // publish debug image with markers
     sensor_msgs::ImagePtr debug;
     try {
-        debug = cv_ptr->toImageMsg();
+        debug = cv_preview->toImageMsg();
     }
 
     catch (cv_bridge::Exception &e) {
@@ -220,14 +225,16 @@ aruco::CameraParameters MarkerPosePublisher::rosCameraInfo2ArucoCamParams(const 
         for(int i=0; i<9; ++i)
             cameraMatrix.at<double>(i%3, i-(i%3)*3) = cam_info.K[i];
 
-        if(cam_info.D.size() == 4)
+        if(cam_info.D.size() >= 4)
         {
             for(int i=0; i<4; ++i)
                 distorsionCoeff.at<double>(i, 0) = cam_info.D[i];
         }
         else
         {
-            ROS_WARN("length of camera_info D vector is not 4, assuming zero distortion...");
+            ROS_WARN("length of camera_info D vector is not 4, assuming zero distortion...\n"
+                     "distortion model of calibration file is %s", cam_info.distortion_model.c_str());
+
             for(int i=0; i<4; ++i)
                 distorsionCoeff.at<double>(i, 0) = 0;
         }
@@ -235,6 +242,11 @@ aruco::CameraParameters MarkerPosePublisher::rosCameraInfo2ArucoCamParams(const 
 
     return aruco::CameraParameters(cameraMatrix, distorsionCoeff, size);
 }
+
+bool MarkerPosePublisher::hasSubscribers(){
+    return markers_pub_array.getNumSubscribers() > 0 && markers_pub_debug.getNumSubscribers() > 0;
+}
+
 
 
 
