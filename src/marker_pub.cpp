@@ -244,7 +244,7 @@ aruco::CameraParameters MarkerPosePublisher::rosCameraInfo2ArucoCamParams(const 
 }
 
 bool MarkerPosePublisher::hasSubscribers(){
-    return markers_pub_array.getNumSubscribers() > 0 && markers_pub_debug.getNumSubscribers() > 0;
+    return markers_pub_array.getNumSubscribers() > 0 || markers_pub_debug.getNumSubscribers() > 0;
 }
 
 
