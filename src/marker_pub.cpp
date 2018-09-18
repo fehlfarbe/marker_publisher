@@ -6,17 +6,13 @@ MarkerPosePublisher::MarkerPosePublisher() : nh_node("~") {
                                     0.6f); //errorCorrectionRate error correction rate respect to the maximun error correction capability for each dictionary. (default 0.6).
 
     // set detection mode and minimum marker size
-    nh_node.param<float>("marker_min", markerSizeMin, 0.01);
+    nh_node.param<float>("marker_min", markerSizeMin, 0);
     nh_node.param<std::string>("detection_mode", detectionMode, "DM_NORMAL");
-
-    if (detectionMode == "DM_NORMAL"){
-        detectionModeEnum = aruco::DetectionMode::DM_NORMAL;
-    } else if (detectionMode == "DM_FAST"){
-        detectionModeEnum = aruco::DetectionMode::DM_FAST;
-    } else if (detectionMode == "DM_VIDEO_FAST"){
-        detectionModeEnum = aruco::DetectionMode::DM_VIDEO_FAST;
-    }
-    //TheMarkerDetector.setDetectionMode(detectionModeEnum, markerSizeMin);
+    aruco::MarkerDetector::Params p;
+    p.setCornerRefinementMethod(p.getCornerRefinementMethodFromString(detectionMode));
+    p.setCornerRefinementMethod(aruco::CORNER_SUBPIX);
+    //p.detectEnclosedMarkers(true); // doesn't detect anything
+    TheMarkerDetector.setParameters(p);
 
     nh_node.param<std::string>("camera_frame", camera_frame, "");
 
