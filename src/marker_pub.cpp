@@ -38,7 +38,8 @@ MarkerPosePublisher::MarkerPosePublisher() : nh_node("~") {
     }
 
     nh_node.param<float>("markerSizeMeters", markerSizeMeters, -1);
-    nh_node.param<bool>("invert_image", invertImage, -1);
+    nh_node.param<bool>("invert_image", invertImage, false);
+    nh_node.param<bool>("equalize", equalize, true);
 
 
     sub = nh_node.subscribe("image_raw", 1, &MarkerPosePublisher::callBackColor, this);
@@ -73,6 +74,15 @@ void MarkerPosePublisher::callBackColor(const sensor_msgs::ImageConstPtr &msg) {
     if(invertImage){
         bitwise_not ( cv_ptr->image, cv_ptr->image );
     }
+
+    if(equalize){
+        cv::Mat gray;
+        cv::cvtColor(cv_ptr->image, gray, cv::COLOR_BGR2GRAY);
+        cv::equalizeHist(gray, gray);
+        cv::cvtColor(gray, cv_ptr->image, cv::COLOR_GRAY2BGR);
+    }
+
+    cv_preview->image = cv_ptr->image;
 
     ros::Time curr_stamp(ros::Time::now());
 

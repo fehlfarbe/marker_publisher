@@ -26,6 +26,7 @@ class MarkerPosePublisher {
     bool useRectifiedImages;
     std::string camera_frame;
     bool invertImage;
+    bool equalize;
 
 public:
     MarkerPosePublisher();
