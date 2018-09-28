@@ -34,7 +34,7 @@ MarkerPosePublisher::MarkerPosePublisher() : nh_node("~") {
     }
 
     nh_node.param<float>("markerSizeMeters", markerSizeMeters, -1);
-    nh_node.param<bool>("invert_image", invertImage, false);
+    nh_node.param<bool>("detect_inverted", detectInverted, false);
     nh_node.param<bool>("equalize", equalize, true);
 
 
@@ -67,10 +67,6 @@ void MarkerPosePublisher::callBackColor(const sensor_msgs::ImageConstPtr &msg) {
         return;
     }
 
-    if(invertImage){
-        bitwise_not ( cv_ptr->image, cv_ptr->image );
-    }
-
     if(equalize){
         cv::Mat gray;
         cv::cvtColor(cv_ptr->image, gray, cv::COLOR_BGR2GRAY);
@@ -85,6 +81,18 @@ void MarkerPosePublisher::callBackColor(const sensor_msgs::ImageConstPtr &msg) {
     static tf::TransformBroadcaster br;
     std::vector<aruco::Marker> detected_markers = TheMarkerDetector.detect(
             cv_ptr->image); //, TheCameraParameters, markerSizeMeters);
+
+
+    // detect inverted markers
+    if(detectInverted){
+        cv::Mat inverted;
+        bitwise_not(cv_ptr->image, inverted);
+        std::vector<aruco::Marker>  inverted_markers = TheMarkerDetector.detect(
+                inverted); //, TheCameraParameters, markerSizeMeters);
+        // add inverted markers to detection list
+        detected_markers.reserve(detected_markers.size() + distance(inverted_markers.begin(),inverted_markers.end()));
+        detected_markers.insert(detected_markers.end(),inverted_markers.begin(),inverted_markers.end());
+    }
 
     marker_msg_pub->markers.clear();
     marker_msg_pub->markers.resize(detected_markers.size());
